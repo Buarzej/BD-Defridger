@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Defridger</string>
+    <string name="search_ingredients">Search ingredients</string>
+    <string name="ingredient_placeholder">Ingredient</string>
+    <string name="recipe_name_placeholder">Recipe</string>
+    <string name="matching_ingredients">Matching ingredients</string>
+    <string name="time">Time</string>
+    <string name="time_format">%1$d min</string>
+    <string name="time_placeholder">25 min</string>
+    <string name="no_user_ingredients">Add at least 1 ingredient</string>
+    <!-- Strings used for fragments for navigation -->
+
+</resources>
