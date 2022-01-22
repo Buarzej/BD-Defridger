@@ -1,14 +1,9 @@
 package com.example.defridger.adapters;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-
-import com.example.defridger.items.Ingredient;
-import com.example.defridger.items.Recipe;
 
 public class DBAdapter {
     public static final String DATABASE_NAME = "food_database.db";

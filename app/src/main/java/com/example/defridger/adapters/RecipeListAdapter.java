@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,8 +23,8 @@ public class RecipeListAdapter extends RecyclerView.Adapter<RecipeListAdapter.Vi
     // Because RecyclerView.Adapter in its current form doesn't natively
     // support cursors, we wrap a CursorAdapter that will do all the job
     // for us.
-    CursorAdapter cursorAdapter;
-    Context context;
+    final CursorAdapter cursorAdapter;
+    final Context context;
 
     public RecipeListAdapter(Context context, Cursor c) {
         this.context = context;
@@ -64,22 +63,19 @@ public class RecipeListAdapter extends RecyclerView.Adapter<RecipeListAdapter.Vi
                 }
                 recipeImage.setImageBitmap(bmp);
 
-                view.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        context.startActivity(browserIntent);
-                    }
+                view.setOnClickListener(view1 -> {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    context.startActivity(browserIntent);
                 });
             }
         };
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView recipeImage;
-        TextView recipeName;
-        TextView recipeTime;
-        TextView matchingIngredients;
+        final ImageView recipeImage;
+        final TextView recipeName;
+        final TextView recipeTime;
+        final TextView matchingIngredients;
 
         public ViewHolder(View itemView) {
             super(itemView);

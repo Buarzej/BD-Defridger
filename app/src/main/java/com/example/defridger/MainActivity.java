@@ -45,7 +45,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.prefs.PreferenceChangeEvent;
 
 public class MainActivity extends AppCompatActivity {
     RecyclerView userIngredientRecyclerView;
@@ -55,14 +54,13 @@ public class MainActivity extends AppCompatActivity {
     UserIngredientListAdapter userIngredientListAdapter;
     TextInputLayout ingredientSearchInputLayout;
     FloatingActionButton findRecipesFAB;
-    boolean hasListChanged = true;
 
-    ArrayList<InlineResponse20024> searchResultData = new ArrayList<>();
+    final ArrayList<InlineResponse20024> searchResultData = new ArrayList<>();
     SharedPreferences sharedPreferences;
 
-    public static String API_KEY = "f9dbf7d212034a9d92c0adc6161f7de2";
-    public static String INGREDIENT_IMAGE_BASE_URL = "https://spoonacular.com/cdn/ingredients_250x250/";
-    public static String RECIPE_IMAGE_BASE_URL = "https://spoonacular.com/recipeImages/";
+    public static final String API_KEY = "f9dbf7d212034a9d92c0adc6161f7de2";
+    public static final String INGREDIENT_IMAGE_BASE_URL = "https://spoonacular.com/cdn/ingredients_250x250/";
+    public static final String RECIPE_IMAGE_BASE_URL = "https://spoonacular.com/recipeImages/";
 
     // Make search box lose focus on touch outside.
     @Override
@@ -105,59 +103,50 @@ public class MainActivity extends AppCompatActivity {
 
     // Add new user ingredient.
     private void addNewIngredient(AdapterView<?> adapterView, View view, int pos) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                IngredientDbAdapter ingredientDbAdapter = new IngredientDbAdapter(adapterView.getContext());
-                ingredientDbAdapter.open();
-                UserIngredientDbAdapter userIngredientDbAdapter = new UserIngredientDbAdapter(adapterView.getContext());
-                userIngredientDbAdapter.open();
+        new Thread(() -> {
+            IngredientDbAdapter ingredientDbAdapter = new IngredientDbAdapter(adapterView.getContext());
+            ingredientDbAdapter.open();
+            UserIngredientDbAdapter userIngredientDbAdapter = new UserIngredientDbAdapter(adapterView.getContext());
+            userIngredientDbAdapter.open();
 
-                int id = searchResultData.get(pos).getId();
-                String name = searchResultData.get(pos).getName();
-                String imageName = searchResultData.get(pos).getImage();
+            int id = searchResultData.get(pos).getId();
+            String name = searchResultData.get(pos).getName();
+            String imageName = searchResultData.get(pos).getImage();
 
-                // Update the database.
-                Ingredient newIngredient = new Ingredient(id, name, imageName);
-                try {
-                    ingredientDbAdapter.insertIngredient(newIngredient);
-                } catch (SQLiteConstraintException e) {
-                    // Ingredient already in at least one of the database recipes.
-                }
-
-                try {
-                    userIngredientDbAdapter.insertUserIngredient(new MeasuredIngredient(id, 0, "g"));
-                } catch (SQLiteConstraintException e) {
-                    // Ingredient already in the database.
-                }
-
-                SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(adapterView.getContext());
-                sharedPreferences.edit().putBoolean("hasListChanged", true).apply();
-
-                // Update the RecyclerView listing user ingredients.
-                userIngredientDbAdapter.close();
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        userIngredientListCursor.requery();
-                        userIngredientListAdapter.notifyDataSetChanged();
-                    }
-                });
-
-                // Get the ingredient image.
-                byte[] decodedImage = getIngredientImage(imageName);
-                ingredientDbAdapter.updateIngredient(id, newIngredient, decodedImage);
-
-                // Update the RecyclerView with new image.
-                ingredientDbAdapter.close();
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        userIngredientListCursor.requery();
-                        userIngredientListAdapter.notifyDataSetChanged();
-                    }
-                });
+            // Update the database.
+            Ingredient newIngredient = new Ingredient(id, name, imageName);
+            try {
+                ingredientDbAdapter.insertIngredient(newIngredient);
+            } catch (SQLiteConstraintException e) {
+                // Ingredient already in at least one of the database recipes.
             }
+
+            try {
+                userIngredientDbAdapter.insertUserIngredient(new MeasuredIngredient(id, 0, "g"));
+            } catch (SQLiteConstraintException e) {
+                // Ingredient already in the database.
+            }
+
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(adapterView.getContext());
+            sharedPreferences.edit().putBoolean("hasListChanged", true).apply();
+
+            // Update the RecyclerView listing user ingredients.
+            userIngredientDbAdapter.close();
+            MainActivity.this.runOnUiThread(() -> {
+                userIngredientListCursor.requery();
+                userIngredientListAdapter.notifyDataSetChanged();
+            });
+
+            // Get the ingredient image.
+            byte[] decodedImage = getIngredientImage(imageName);
+            ingredientDbAdapter.updateIngredient(id, newIngredient, decodedImage);
+
+            // Update the RecyclerView with new image.
+            ingredientDbAdapter.close();
+            MainActivity.this.runOnUiThread(() -> {
+                userIngredientListCursor.requery();
+                userIngredientListAdapter.notifyDataSetChanged();
+            });
         }).start();
     }
 
@@ -209,64 +198,49 @@ public class MainActivity extends AppCompatActivity {
         assert searchBar != null;
         searchBar.setAdapter(autoCompleteAdapter);
 
-        searchBar.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                if (i == EditorInfo.IME_ACTION_SEARCH) {
-                    ProgressBar progressBar = (ProgressBar) findViewById(R.id.ingredientSearchInProgress);
-                    progressBar.setVisibility(View.VISIBLE);
+        searchBar.setOnEditorActionListener((textView, i, keyEvent) -> {
+            if (i == EditorInfo.IME_ACTION_SEARCH) {
+                ProgressBar progressBar = (ProgressBar) findViewById(R.id.ingredientSearchInProgress);
+                progressBar.setVisibility(View.VISIBLE);
 
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            ArrayList<String> searchResults = getAutoCompleteList(searchBar.getText().toString());
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        autoCompleteAdapter.clear();
-                                        for (String result : searchResults)
-                                            autoCompleteAdapter.add(result);
-                                        autoCompleteAdapter.getFilter().filter(searchBar.getText(), null);
-                                    } catch (UnsupportedOperationException e) {
-                                        // Do nothing.
-                                    }
-                                    progressBar.setVisibility(View.INVISIBLE);
-                                }
-                            });
+                new Thread(() -> {
+                    ArrayList<String> searchResults = getAutoCompleteList(searchBar.getText().toString());
+                    MainActivity.this.runOnUiThread(() -> {
+                        try {
+                            autoCompleteAdapter.clear();
+                            for (String result : searchResults)
+                                autoCompleteAdapter.add(result);
+                            autoCompleteAdapter.getFilter().filter(searchBar.getText(), null);
+                        } catch (UnsupportedOperationException e) {
+                            // Do nothing.
                         }
-                    }).start();
-                    return true;
-                }
-                return false;
+                        progressBar.setVisibility(View.INVISIBLE);
+                    });
+                }).start();
+                return true;
             }
+            return false;
         });
 
         // Add a new ingredient.
-        searchBar.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                searchBar.getText().clear();
-                addNewIngredient(adapterView, view, i);
-            }
+        searchBar.setOnItemClickListener((adapterView, view, i, l) -> {
+            searchBar.getText().clear();
+            addNewIngredient(adapterView, view, i);
         });
 
         // FAB.
         findRecipesFAB = findViewById(R.id.findRecipesFAB);
-        findRecipesFAB.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (userIngredientListAdapter.getItemCount() == 0) {
-                    Toast.makeText(getApplicationContext(), R.string.no_user_ingredients, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                Intent recipeSearch = new Intent(getApplicationContext(), RecipeListActivity.class);
-                recipeSearch.putExtra("hasListChanged", sharedPreferences.getBoolean("hasListChanged", false));
-                startActivity(recipeSearch);
-
-                sharedPreferences.edit().putBoolean("hasListChanged", false).apply();
+        findRecipesFAB.setOnClickListener(view -> {
+            if (userIngredientListAdapter.getItemCount() == 0) {
+                Toast.makeText(getApplicationContext(), R.string.no_user_ingredients, Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            Intent recipeSearch = new Intent(getApplicationContext(), RecipeListActivity.class);
+            recipeSearch.putExtra("hasListChanged", sharedPreferences.getBoolean("hasListChanged", false));
+            startActivity(recipeSearch);
+
+            sharedPreferences.edit().putBoolean("hasListChanged", false).apply();
         });
 
         dbAdapter.close();

@@ -1,7 +1,5 @@
 package com.example.defridger.items;
 
-import java.util.ArrayList;
-
 public class Ingredient {
     public int id;
     public String name;

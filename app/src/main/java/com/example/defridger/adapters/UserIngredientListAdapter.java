@@ -25,8 +25,8 @@ public class UserIngredientListAdapter extends RecyclerView.Adapter<UserIngredie
     // Because RecyclerView.Adapter in its current form doesn't natively
     // support cursors, we wrap a CursorAdapter that will do all the job
     // for us.
-    CursorAdapter cursorAdapter;
-    Context context;
+    final CursorAdapter cursorAdapter;
+    final Context context;
 
     public UserIngredientListAdapter(Context context, Cursor c) {
         this.context = context;
@@ -60,41 +60,38 @@ public class UserIngredientListAdapter extends RecyclerView.Adapter<UserIngredie
                 ingredientImage.setImageBitmap(bmp);
 
                 final int position = cursor.getPosition();
-                ingredientClearButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        IngredientDbAdapter ingredientDbAdapter = new IngredientDbAdapter(context);
-                        ingredientDbAdapter.open();
-                        UserIngredientDbAdapter userIngredientDbAdapter = new UserIngredientDbAdapter(context);
-                        userIngredientDbAdapter.open();
+                ingredientClearButton.setOnClickListener(view1 -> {
+                    IngredientDbAdapter ingredientDbAdapter = new IngredientDbAdapter(context);
+                    ingredientDbAdapter.open();
+                    UserIngredientDbAdapter userIngredientDbAdapter = new UserIngredientDbAdapter(context);
+                    userIngredientDbAdapter.open();
 
-                        cursor.moveToPosition(position);
-                        int userIngredientID = cursor.getInt(cursor.getColumnIndexOrThrow(UserIngredientDbAdapter.KEY_ID));
-                        int ingredientID = cursor.getInt(cursor.getColumnIndexOrThrow(IngredientDbAdapter.KEY_ID));
-                        userIngredientDbAdapter.deleteUserIngredient(userIngredientID);
-                        try {
-                            ingredientDbAdapter.deleteIngredient(ingredientID);
-                        } catch (SQLiteConstraintException e) {
-                            // Ingredient still present in at least one of the database recipes.
-                        }
-
-                        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-                        sharedPreferences.edit().putBoolean("hasListChanged", true).apply();
-
-                        userIngredientDbAdapter.close();
-                        ingredientDbAdapter.close();
-                        cursor.requery();
-                        UserIngredientListAdapter.this.notifyDataSetChanged();
+                    cursor.moveToPosition(position);
+                    int userIngredientID = cursor.getInt(cursor.getColumnIndexOrThrow(UserIngredientDbAdapter.KEY_ID));
+                    int ingredientID = cursor.getInt(cursor.getColumnIndexOrThrow(IngredientDbAdapter.KEY_ID));
+                    userIngredientDbAdapter.deleteUserIngredient(userIngredientID);
+                    try {
+                        ingredientDbAdapter.deleteIngredient(ingredientID);
+                    } catch (SQLiteConstraintException e) {
+                        // Ingredient still present in at least one of the database recipes.
                     }
+
+                    SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+                    sharedPreferences.edit().putBoolean("hasListChanged", true).apply();
+
+                    userIngredientDbAdapter.close();
+                    ingredientDbAdapter.close();
+                    cursor.requery();
+                    UserIngredientListAdapter.this.notifyDataSetChanged();
                 });
             }
         };
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView ingredientImage;
-        TextView ingredientName;
-        ImageButton ingredientClearButton;
+        final ImageView ingredientImage;
+        final TextView ingredientName;
+        final ImageButton ingredientClearButton;
 
         public ViewHolder(View itemView) {
             super(itemView);
